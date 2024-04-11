@@ -1,6 +1,7 @@
 Open Tabular Editor.
 Connect to a model.
 Run the following code in the Advanced Scripting window.
+```c#
 System.Net.WebClient w = new System.Net.WebClient(); 
 
 string path = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
@@ -14,3 +15,4 @@ if (version == "3")
 }
 
 w.DownloadFile(url, downloadLoc);
+```
