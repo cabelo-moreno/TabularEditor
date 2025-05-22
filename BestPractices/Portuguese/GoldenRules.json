@@ -1,0 +1,204 @@
+[
+  {
+    "ID": "REDUCE_USAGE_OF_LONG-LENGTH_COLUMNS_WITH_HIGH_CARDINALITY",
+    "Name": "[Performance] Reduzir o uso de colunas com textos longos e muita cardinalidade",
+    "Category": "Performance",
+    "Description": "É melhor evitar colunas com textos longos. Especialmente se a coluna contém muitos valores únicos. Esse tipo de colunas pode causar longos tempos de processamento, aumentar o tamanho do modelo, e deixar as queries dos usuários mais lentas. Um texto longo é definido como tendo mais de 100 caracteres.",
+    "Severity": 2,
+    "Scope": "DataColumn, CalculatedColumn, CalculatedTableColumn",
+    "Expression": "Convert.ToInt64(GetAnnotation(\"LongLengthRowCount\")) > 500000",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_AUTO-DATE_TABLE",
+    "Name": "[Performance] Remover tabelas automáticas de data",
+    "Category": "Performance",
+    "Description": "Evite utilizar tabelas de data automáticas. Certifique-se de desligar a função de criar tabelas automaticamente no Power BI Desktop. Isso salvará recursos de memória. \r\nReferência: https://www.youtube.com/watch?v=xu3uDEHtCrg",
+    "Severity": 2,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "ObjectTypeName == \"Calculated Table\"\n\r\nand\r\n\n(\nName.StartsWith(\"DateTableTemplate_\") \n\nor \n\nName.StartsWith(\"LocalDateTable_\")\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_EXCESSIVE_BI-DIRECTIONAL_OR_MANY-TO-MANY_RELATIONSHIPS",
+    "Name": "[Performance] Evite uso excessivo de relacionamentos bidirecionais e muitos pra muitos",
+    "Category": "Performance",
+    "Description": "Limite o uso de relacionamentos bidirecionais e muitos pra muitos. Essa regra marca se mais de 30% of relationships são bidirecionais ou muitos pra muitos.\r\nReferência: https://www.sqlbi.com/articles/bidirectional-relationships-and-ambiguity-in-dax/",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "(\r\n\nRelationships.Where(CrossFilteringBehavior == CrossFilteringBehavior.BothDirections).Count()\r\n\n+\r\n\nRelationships.Where(FromCardinality.ToString() == \"Many\" && ToCardinality.ToString() == \"Many\").Count()\r\n\n)\r\n\n\n/\r\n\n\nMath.Max(Convert.ToDecimal(Relationships.Count)\n\n,1)> 0.3",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MODEL_USING_DIRECT_QUERY_AND_NO_AGGREGATIONS",
+    "Name": "[Performance] Considere criar agregações se está usando Direct Query no Power BI",
+    "Category": "Performance",
+    "Description": "Se estiver usando Direct Query na capacity do Power BI Premium, você deve querer considerar usar agregações para otimizar a performance.\r\nReferência: https://docs.microsoft.com/power-bi/transform-model/desktop-aggregations",
+    "Severity": 1,
+    "Scope": "Model",
+    "Expression": "Tables.Any(ObjectTypeName == \"Table (DirectQuery)\")\r\nand\r\n\n\nAllColumns.Any(AlternateOf != null) == false\r\nand \r\nDefaultPowerBIDataSourceVersion.ToString() == \"PowerBI_V3\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MINIMIZE_POWER_QUERY_TRANSFORMATIONS",
+    "Name": "[Performance] Minimize transformações no Power Query",
+    "Category": "Performance",
+    "Description": "Minimizar as transformações no Power Query podem otimizar o processamento do modelo. É uma boa prática mover essas transformações para a sua fonte de dados se possível. Também, check se o query folding está funcionando com o seu modelo. Verifique o artigo abaixo para mais informações sobre query folding.\r\nReferência: https://docs.microsoft.com/power-query/power-query-folding",
+    "Severity": 2,
+    "Scope": "Partition",
+    "Expression": "\nSourceType.ToString() = \"M\"\r\nand\r\n(\r\nQuery.Contains(\"Table.Combine(\")\r\nor\r\n\nQuery.Contains(\"Table.Join(\")\r\nor\r\n\nQuery.Contains(\"Table.NestedJoin(\")\r\nor\r\nQuery.Contains(\"Table.AddColumn(\")\r\nor\r\nQuery.Contains(\"Table.Group(\")\r\nor\r\nQuery.Contains(\"Table.Sort(\")\r\nor\r\nQuery.Contains(\"Table.Pivot(\")\r\nor\r\nQuery.Contains(\"Table.Unpivot(\")\r\nor\r\nQuery.Contains(\"Table.UnpivotOtherColumns(\")\r\nor\r\nQuery.Contains(\"Table.Distinct(\")\r\nor\r\nQuery.Contains(\"OleDb.Query\")\r\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_USING_MANY-TO-MANY_RELATIONSHIPS_ON_TABLES_USED_FOR_DYNAMIC_ROW_LEVEL_SECURITY",
+    "Name": "[Performance] Evite relacionamentos muitos pra muitos em tabelas usadas para RLS dinâmico",
+    "Category": "Performance",
+    "Description": "Usar relacionamentos muitos pra muitos em tabelas que usam RLS dinâmico pode causar uma grande queda na performance. Os problemas de performance desse formato ocorrem quando utiliza-se dimensões snowflake com relacionamentos muitos pra muitos e com essas tabelas sendo afetadas pelo RLS. Em vez disso, use um dos formatos de modelo apresentados no artigo abaixo onde uma única tabela dimensão se relaciona como \"muitos pra um\" com a tabela de segurança.\r\n\r\nReferência: https://www.elegantbi.com/post/dynamicrlspatterns",
+    "Severity": 3,
+    "Scope": "Table",
+    "Expression": "UsedInRelationships.Any(FromCardinality == \"Many\" and ToCardinality== \"Many\")\r\nand\r\nRowLevelSecurity.Any(it.Length > 0)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MANY-TO-MANY_RELATIONSHIPS_SHOULD_BE_SINGLE-DIRECTION",
+    "Name": "[Performance] Relacionamentos muitos pra muitos devem ser em direção única",
+    "Category": "Performance",
+    "Severity": 2,
+    "Scope": "Relationship",
+    "Expression": "FromCardinality == \"Many\"\n\r\nand\r\n\nToCardinality == \"Many\"\r\n\nand\r\n\nCrossFilteringBehavior == \"BothDirections\"",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REDUCE_USAGE_OF_CALCULATED_TABLES",
+    "Name": "[Performance] Reduzir o uso de tabelas calculadas",
+    "Category": "Performance",
+    "Description": "Migre a lógica das suas tabelas calculadas para a sua fonte data warehouse. A dependência de tabelas calculadas levará a possíveis desalinhamentos se você tiver múltiplos modelos na sua plataforma.",
+    "Severity": 2,
+    "Scope": "CalculatedTable",
+    "Expression": "1=1",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "MEASURES_USING_TIME_INTELLIGENCE_AND_MODEL_IS_USING_DIRECT_QUERY",
+    "Name": "[Performance] Métricas usando time intelligence e modelo usando Direct Query",
+    "Category": "Performance",
+    "Description": "Até o momento, funções de time intelligence são conhecidas por não performar bem quando utilizado em Direct Query. Se você tiver problemas de performance, você pode querer tentar soluções alternativas como adicionar colunas na sua tabela fato que mostram os dados do ano anterior ou do mês anterior.",
+    "Severity": 2,
+    "Scope": "Measure, CalculationItem",
+    "Expression": "Model.Tables.Any(ObjectTypeName == \"Table (DirectQuery)\")\r\nand\r\n(\r\nRegEx.IsMatch(Expression,\"CLOSINGBALANCEMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"CLOSINGBALANCEQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"CLOSINGBALANCEYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATEADD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESBETWEEN\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESINPERIOD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESMTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESQTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"DATESYTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"ENDOFMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"ENDOFQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"ENDOFYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"FIRSTDATE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"FIRSTNONBLANK\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"FIRSTNONBLANKVALUE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"LASTDATE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"LASTNONBLANK\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"LASTNONBLANKVALUE\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTDAY\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"NEXTYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"OPENINGBALANCEMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"OPENINGBALANCEQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"OPENINGBALANCEYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PARALLELPERIOD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSDAY\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"PREVIOUSYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"SAMEPERIODLASTYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"STARTOFMONTH\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"STARTOFQUARTER\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"STARTOFYEAR\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"TOTALMTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"TOTALQTD\\s*\\(\")\r\nor\r\nRegEx.IsMatch(Expression,\"TOTALYTD\\s*\\(\")\r\n)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REDUCE_NUMBER_OF_CALCULATED_COLUMNS",
+    "Name": "[Performance] Reduzir o número de colunas calculadas",
+    "Category": "Performance",
+    "Description": "Colunas calculadas não possuem compressão tão eficiente quanto colunas de dados então elas ocupam mais memória. Elas também causam lentidão no tempo de processamento para todas as tabelas utilizadas assim como para o processo de recalc. Transfira a lógica da coluna calculada para a sua fonte data warehouse e transforme essas colunas calculadas em colunas de dados.\r\nReferência: https://www.elegantbi.com/post/top10bestpractices",
+    "Severity": 2,
+    "Scope": "Model",
+    "Expression": "AllColumns.Where(Type.ToString() == \"Calculated\").Count() > 5",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "CHECK_IF_BI-DIRECTIONAL_AND_MANY-TO-MANY_RELATIONSHIPS_ARE_VALID",
+    "Name": "[Performance] Confira se os relacionamentos bidirecionais e muitos pra muitos são necessários e válidos",
+    "Category": "Performance",
+    "Description": "Relacionamentos bidirecionais e muitos pra muitos podem causar queda de performance ou até consequências não planejadas. Certifique-se de conferir se esses relacionamentos em específico estão funcionando como foram planejados e se eles ainda são necessários.\r\nReferência: https://www.sqlbi.com/articles/bidirectional-relationships-and-ambiguity-in-dax/",
+    "Severity": 1,
+    "Scope": "Relationship",
+    "Expression": "FromCardinality.ToString() = \"Many\" and ToCardinality.ToString() = \"Many\"\r\nor\r\nCrossFilteringBehavior == CrossFilteringBehavior.BothDirections",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "DATA_COLUMNS_MUST_HAVE_A_SOURCE_COLUMN",
+    "Name": "[Prevenção de Erros] Colunas de dados deve ter uma coluna de fonte",
+    "Category": "Prevenção de Erros",
+    "Description": "Colunas de dados devem ter uma coluna de fonte. Uma coluna de dados sem uma coluna de fonte irá causar erro quando processar o modelo.",
+    "Severity": 3,
+    "Scope": "DataColumn",
+    "Expression": "string.IsNullOrWhitespace(SourceColumn)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "EXPRESSION_RELIANT_OBJECTS_MUST_HAVE_AN_EXPRESSION",
+    "Name": "[Prevenção de Erros] Objetos dependentes de expressão precisam ter uma expressão",
+    "Category": "Prevenção de Erros",
+    "Description": "Colunas calculadas, itens calculados e métricas precisam ter uma expressão. Sem uma expressão esses objetos não irão mostrar nenhum valor.",
+    "Severity": 3,
+    "Scope": "Measure, CalculatedColumn, CalculationItem",
+    "Expression": "string.IsNullOrWhiteSpace(Expression)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "AVOID_THE_USERELATIONSHIP_FUNCTION_AND_RLS_AGAINST_THE_SAME_TABLE",
+    "Name": "[Prevenção de Erros] Evite usar a função USERELATIONSHIP e RLS na mesma tabela",
+    "Category": "Prevenção de Erros",
+    "Description": "A função USERELATIONSHIP não pode ser usada em uma tabela que também possui regras de RLS. Isso irá gerar um erro quando usar a métrica em um visual. Essa regrar irá marcar a tabela que está usando uma métrica USERELATIONSHIP e um RLS.\r\n\r\nReferência: https://blog.crossjoin.co.uk/2013/05/10/userelationship-and-tabular-row-security/",
+    "Severity": 3,
+    "Scope": "Table, CalculatedTable",
+    "Expression": "Model.AllMeasures.Any(RegEx.IsMatch(Expression,\"(?i)USERELATIONSHIP\\s*\\(\\s*.+?(?=])\\]\\s*,\\s*'*\" + current.Name + \"'*\\[\"))\r\nand\r\nRowLevelSecurity.Any(it <> null)",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "RELATIONSHIP_COLUMNS_SAME_DATA_TYPE",
+    "Name": "[Prevenção de Erros] Colunas de relacionamento devem ser do mesmo tipo de dados",
+    "Category": "Prevenção de Erros",
+    "Description": "Colunas usadas em um relacionamento devem ser do mesmo tipo de dados. O ideal é que sejam do tipo inteiro (veja a regra relacionada '[Formatação] Colunas de relacionamento devem ser do tipo inteiro'). Ter colunas de relacionamento com tipos de dados diferentes pode causar uma série de erros.",
+    "Severity": 3,
+    "Scope": "Relationship",
+    "Expression": "FromColumn.DataType != ToColumn.DataType",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "FIX_REFERENTIAL_INTEGRITY_VIOLATIONS",
+    "Name": "[Manutenção] Corrija violações de integridade referencial",
+    "Category": "Manutenção",
+    "Description": "Essa regra ressalta relacionamentos nos quais existem violações de integridade referencial. Isso indica que existem valores na tabela do lado 'from' do relacionamento que não existe na tabela do lado 'to' do relacionamento. Violação de integridade referencial também irá gerar o valor 'blank' nos filtros. É recomendado corrigir esses problemas garantindo que a chave primrária do lado 'to' do relacionamento contenha todos os valores da chave estrangeira do lado 'from'.\r\n\r\nReferência: https://blog.enterprisedna.co/vertipaq-analyzer-tutorial-relationships-referential-integrity/",
+    "Severity": 2,
+    "Scope": "Relationship",
+    "Expression": "Convert.ToInt64(GetAnnotation(\"Vertipaq_RIViolationInvalidRows\")) > 0",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_DATA_SOURCES_NOT_REFERENCED_BY_ANY_PARTITIONS",
+    "Name": "[Manutenção] Remova fontes de dados que não são referenciadas por nenhuma partição",
+    "Category": "Manutenção",
+    "Description": "Fontes de dados que não são referenciadas por nenhuma partição devem ser removidas.",
+    "Severity": 1,
+    "Scope": "ProviderDataSource, StructuredDataSource",
+    "Expression": "UsedByPartitions.Count() == 0\r\nand not Model.Tables.Any(SourceExpression.Contains(OuterIt.Name))\r\nand not Model.AllPartitions.Any(Query.Contains(OuterIt.Name))",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "REMOVE_ROLES_WITH_NO_MEMBERS",
+    "Name": "[Manutenção] Remova regras sem membros",
+    "Category": "Manutenção",
+    "Description": "Devemos remover as regras que não possuem nenhum membro.",
+    "Severity": 1,
+    "Scope": "ModelRole",
+    "Expression": "Members.Count() == 0",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "PERSPECTIVES_WITH_NO_OBJECTS",
+    "Name": "[Manutenção] Perspectivas sem objetos",
+    "Category": "Manutenção",
+    "Description": "Perspectivas que não contém objetos (tabelas) provavelmente são desnecessárias. Nessa regra, é necessário verificar apenas as tabelas, pois se adicionar uma coluna/métrica/hierarquia à uma perspectiva também adiciona a tabela. Além disso, tabelas em geral abrange tabelas calculadas e grupos de cálculo também..",
+    "Severity": 1,
+    "Scope": "Perspective",
+    "Expression": "Model.Tables.Any(InPerspective[current.Name]) == false",
+    "FixExpression": "Delete()",
+    "CompatibilityLevel": 1200
+  },
+  {
+    "ID": "CALCULATION_GROUPS_WITH_NO_CALCULATION_ITEMS",
+    "Name": "[Manutenção] Grupos de cálculo sem cálculo de itens",
+    "Category": "Manutenção",
+    "Description": "Grupos de cálculo não possuem função a menos que eles possuam cálculo de itens.",
+    "Severity": 2,
+    "Scope": "CalculationGroup",
+    "Expression": "CalculationItems.Count == 0",
+    "CompatibilityLevel": 1200
+  }
+]
